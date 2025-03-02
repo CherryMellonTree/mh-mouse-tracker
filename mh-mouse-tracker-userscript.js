@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         MouseHunt Mouse Tracker
 // @namespace    http://tampermonkey.net/
-// @version      0.8.37
-// @description  Tracks mice caught in MouseHunt (reworked grouping)
-// @author       You
+// @version      0.9.0
+// @description  Tracks mice caught in MouseHunt
+// @author       CherryMellonTree
 // @match        https://www.mousehuntgame.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=mousehuntgame.com
 // @grant        GM_setValue
@@ -62,7 +62,7 @@ GM_addStyle(`
   .mh-group-collapse-icon_v2 {width: 14px; height: 14px; text-align: center; line-height: 14px; margin-left: 10px; font-size: 1em; opacity: 0.7; transition: opacity 0.3s ease;}
   .mh-group-header-row_v2:hover .mh-group-collapse-icon_v2 {opacity: 1;}
   .mh-group-mice-container_v2 {padding: 0px; margin-left: 0px; overflow-y:scroll;/*height: auto;*/ } /* Removed fixed height from group containers, removed margin */
-  .mh-location-header-row_v2 {background-color: #4a4a4a; color: #e8e8e8; font-weight: bold; padding: 5px 6px; margin-top: 0px; margin-bottom: 0px; min_height: 25px; border-radius: 3px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none;}
+  .mh-location-header-row_v2 {background-color: #4a4a4a; color: #e8e8e8; font-weight: bold; padding: 5px 6px; margin-top: 0px; margin-bottom: 0px; min-height: 25px; border-radius: 3px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none;}
   .mh-location-header-row_v2:hover {background-color: #5a5a5a;}
   .mh-location-title_v2 {flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.95em;}
   .mh-location-collapse-icon_v2 {width: 12px; height: 12px; text-align: center; line-height: 12px; margin-left: 8px; font-size: 0.9em; opacity: 0.6; transition: opacity 0.3s ease;}
@@ -203,6 +203,12 @@ GM_addStyle(`
     exportButton.addEventListener('click', copyMouseDataToClipboard);
 
     titleElement.appendChild(exportButton)
+    // load data button
+    const fetchDataButton = document.createElement('button');
+    fetchDataButton.id = 'mh-back-button_v2';
+    fetchDataButton.innerHTML = 'Update Data';
+    fetchDataButton.onclick = fetchData;
+    titleElement.appendChild(fetchDataButton)
     return titleElement;
   }
 
@@ -699,7 +705,10 @@ GM_addStyle(`
       saveNavigationState(); 
     }
   };
-
+  const fetchData = () => {
+    fetchMouseDataAndUpdateUI();
+    updateUI();
+  }
   async function copyMouseDataToClipboard() {
     console.log(ts.initialMouseData)
     let fullOutput = "";
@@ -957,7 +966,7 @@ GM_addStyle(`
       return;
     }
     await fetchEnvironmentsData(); // Fetch environments data on initialization
-    fetchMouseDataAndUpdateUI();
+    // fetchMouseDataAndUpdateUI();
   
     const storedTrackerState = localStorage.getItem('mhMouseTrackerState_v2');
     if (storedTrackerState) {
@@ -982,7 +991,7 @@ GM_addStyle(`
       }
     }
     
-    updateUI();
+    // updateUI();
   }
 
   // --- no longer used methods
