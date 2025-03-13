@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MouseHunt Mouse Tracker
 // @namespace    http://tampermonkey.net/
-// @version      0.9.0
+// @version      0.9.1
 // @description  Tracks mice caught in MouseHunt
 // @author       CherryMellonTree
 // @match        https://www.mousehuntgame.com/*
@@ -198,17 +198,16 @@ GM_addStyle(`
 
     //export button
     const exportButton = document.createElement('button');
-    exportButton.textContent = "Export Data";
+    exportButton.textContent = "Copy to clipboard";
     exportButton.id = 'mh-trakcer-export-button_v2'
     exportButton.addEventListener('click', copyMouseDataToClipboard);
+    const exportToFileButton = document.createElement('button')
+    exportToFileButton.textContent = "Export to file";
+    exportToFileButton.id = 'mh-trakcer-export-button_v2'
+    exportToFileButton.addEventListener('click', exportStartStateToFile)
 
     titleElement.appendChild(exportButton)
-    // load data button
-    const fetchDataButton = document.createElement('button');
-    fetchDataButton.id = 'mh-back-button_v2';
-    fetchDataButton.innerHTML = 'Update Data';
-    fetchDataButton.onclick = fetchData;
-    titleElement.appendChild(fetchDataButton)
+    titleElement.appendChild(exportToFileButton)
     return titleElement;
   }
 
@@ -240,9 +239,16 @@ GM_addStyle(`
     startBtn.addEventListener('mouseover', handleStartButtonHover);
     startBtn.addEventListener('mouseout', handleStartButtonOut);
 
+    // load data button
+    const fetchDataButton = document.createElement('button');
+    fetchDataButton.id = 'mh-back-button_v2';
+    fetchDataButton.innerHTML = 'Update Data';
+    fetchDataButton.onclick = fetchData;
+
     startBtnCont.appendChild(startBtn);
     ctrlRow.appendChild(huntsRow);
     ctrlRow.appendChild(startBtnCont);
+    ctrlRow.appendChild(fetchDataButton)
 
     dom.huntsCountDisplay = huntsDisplay;
     dom.startBtn = startBtn;
@@ -281,7 +287,7 @@ GM_addStyle(`
     
     miceLst.appendChild(backButtonContainer);
     miceLst.appendChild(headerRow);
-    miceLst.appendChild(document.createTextNode('Tracker Reset. Click "Start Tracker" to begin.'));
+    miceLst.appendChild(document.createTextNode('No data loaded, click Start Tracker or Update Data to continue'));
     
     return miceLst;
   };
@@ -721,6 +727,32 @@ GM_addStyle(`
         .then(() => console.log("Copied to clipboard:\n"))
         .catch(err => console.error("Failed to copy text: ", err));
   }
+  function checkSum(object){
+    let hash = 0;
+    for (let i = 0; i < object.length; i++) {
+        hash = (hash + object.charCodeAt(i)) % 1_000_000_007;
+    }
+    return hash;
+  }
+  async function exportStartStateToFile() {
+    let startState = localStorage.getItem('mhMouseTrackerState_v2');
+    let sum = checkSum(startState);
+    startState = JSON.parse(startState)
+    startState['Checksum'] = sum
+    const blob = new Blob([JSON.stringify(startState, null, 2)], { type: "application/json" }); // Format nicely
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "startState.json";
+    document.body.appendChild(a);
+    a.click();
+
+    // Cleanup
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
 
   function createExportRow(mouse, initialMouseData){
     const { sessionCatches, sessionMisses } = calculateSessionCM(mouse, initialMouseData);
