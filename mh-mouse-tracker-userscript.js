@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MouseHunt Mouse Tracker
 // @namespace    http://tampermonkey.net/
-// @version      0.9.1
+// @version      0.9.2
 // @description  Tracks mice caught in MouseHunt
 // @author       CherryMellonTree
 // @match        https://www.mousehuntgame.com/*
@@ -515,7 +515,8 @@ GM_addStyle(`
         headerRow.innerHTML = `
           <span class="mh-header-name-col_v2">Mouse</span>
           <span class="mh-header-cm-col_v2">C/M</span>
-        `;        break;
+        `;
+        break;
       case 1:
         currentLocation.textContent = correctGroupName(currentView);
         // Create header row
@@ -556,7 +557,9 @@ GM_addStyle(`
       // Show only region headers
       groupedMouseData.forEach(regionGroup => {
         const regionHeaderRow = createGroupHeaderRow(regionGroup);
-        miceLst.appendChild(regionHeaderRow);
+        if(regionHeaderRow){
+          miceLst.appendChild(regionHeaderRow);
+        }
       });
     } else {
       // Find current region or location
@@ -584,33 +587,36 @@ GM_addStyle(`
   };
 
   const createGroupHeaderRow = (group) => {
-    const headerRow = document.createElement('div');
-    headerRow.className = 'mh-group-header-row_v2';
-    headerRow.onclick = () => enterRegion(group);
-
-    const titleSpan = document.createElement('span');
-    titleSpan.className = 'mh-group-title_v2';
-    titleSpan.textContent = correctGroupName(group.groupName);
-
-    // Use sets to ensure uniqueness for both counts.
-    const uniqueMiceSet = new Set();
-    const nonZeroMiceSet = new Set();
-    group.locations.forEach(locationGroup => {
-        locationGroup.mice.forEach(mouse => {
-            uniqueMiceSet.add(mouse.name);
-            const { sessionCatches } = calculateSessionCM(mouse, ts.initialMouseData || []);
-            if (sessionCatches > 0) {
-                nonZeroMiceSet.add(mouse.name);
-            }
-        });
-    });
-
-    const countSpan = document.createElement('span');
-    countSpan.textContent = `${nonZeroMiceSet.size}/${uniqueMiceSet.size}`;
-
-    headerRow.appendChild(titleSpan);
-    headerRow.appendChild(countSpan);
-    return headerRow;
+    if(correctGroupName(group.groupName) != "Unknown Region"){
+      const headerRow = document.createElement('div');
+      headerRow.className = 'mh-group-header-row_v2';
+      headerRow.onclick = () => enterRegion(group);
+  
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'mh-group-title_v2';
+      titleSpan.textContent = correctGroupName(group.groupName);
+  
+      // Use sets to ensure uniqueness for both counts.
+      const uniqueMiceSet = new Set();
+      const nonZeroMiceSet = new Set();
+      group.locations.forEach(locationGroup => {
+          locationGroup.mice.forEach(mouse => {
+              uniqueMiceSet.add(mouse.name);
+              const { sessionCatches } = calculateSessionCM(mouse, ts.initialMouseData || []);
+              if (sessionCatches > 0) {
+                  nonZeroMiceSet.add(mouse.name);
+              }
+          });
+      });
+  
+      const countSpan = document.createElement('span');
+      countSpan.textContent = `${nonZeroMiceSet.size}/${uniqueMiceSet.size}`;
+  
+      headerRow.appendChild(titleSpan);
+      headerRow.appendChild(countSpan);
+      return headerRow;
+    }
+    return false
     };
 
 
