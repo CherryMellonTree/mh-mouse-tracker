@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MouseHunt Mouse Tracker
 // @namespace    http://tampermonkey.net/
-// @version      0.9.2
+// @version      0.10.0
 // @description  Tracks mice caught in MouseHunt
 // @author       CherryMellonTree
 // @match        https://www.mousehuntgame.com/*
