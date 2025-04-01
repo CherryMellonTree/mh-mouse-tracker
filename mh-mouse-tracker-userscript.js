@@ -689,6 +689,9 @@ GM_addStyle(`
       if (sessionStartData) {
         sessionCatches = mouse.catches - sessionStartData.catches;
         sessionMisses = mouse.misses - sessionStartData.misses;
+      }else{
+        sessionCatches = mouse.catches;
+        sessionMisses = mouse.misses;
       }
     }
     return { sessionCatches, sessionMisses };
