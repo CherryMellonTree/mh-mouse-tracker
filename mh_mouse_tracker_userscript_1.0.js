@@ -56,6 +56,9 @@
     let ts = {};
     const storedTrackerState = localStorage.getItem('mhMouseTrackerState_v2');
     ts = JSON.parse(storedTrackerState);
+    if(ts===null){
+      ts = {}
+    }
     let environments = []; // Store environments data here
     let current_mouse_data;
 
@@ -75,23 +78,6 @@
       }
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   /**
    * Styling, untill I find a better fix
    */
@@ -106,7 +92,7 @@
         .mh-location-header-row_v2:hover, .mh-group-header-row_v2:hover {background-color: #fcfcfc;}
         #mh-current-location_v2 {color: #e0e0e0;font-size: 0.95em;font-weight: bold;}
         .mh-mouse-name-col_v2 { font-weight: bold;text-align: left; padding: 4px 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;min-height: 15px;}
-        .mh-location-mice-container_v2 {justify-content: space-between;background-color: #e0e0e0; min-height: 150px; max-height: 500px; overflow-y: auto;}
+        .mh-location-mice-container_v2 {justify-content: space-between;background-color: #e0e0e0; min-height: 50px; max-height: 500px; overflow-y: auto;}
         .mh-location-mice-container_v2 > div {display: flex;justify-content: space-between;}
         #mh-current-location_v2 {color: #e0e0e0;font-size: 0.95em;font-weight: bold;}
         #mh-navigation-row_v2 {display: flex;align-items: center;gap: 10px; background-color: #909090}
@@ -158,7 +144,6 @@
         floatingDivState.tracked_mice.push(mouseName);
       }
     }
-    console.log(floatingDivState.tracked_mice)
     localStorage.setItem('mhMouseTrackerFloatingDivState_v2', JSON.stringify(floatingDivState));
 
   }
@@ -369,12 +354,17 @@
       return allMiceData
   }
 
-
+  const calculateTotalHuntsSinceStart = (md) => {
+    const currentHunts = calculateTotalHunts(md);
+    const startHunts = calculateTotalHunts(ts.initialMouseData);
+    return currentHunts - startHunts
+    //TODO: ALL OF THIS
+  }
   const calculateTotalHunts = (md) => {
       const uniqueNames = {};
       var hunts = 0;
       for (const mouse of md){
-          if(!uniqueNames[mouse.name]){
+          if(!uniqueNames[mouse.name] && !event_mice.includes(mouse.name)){
               uniqueNames[mouse.name] = true;
               hunts += mouse.catches + mouse.misses;
           }
@@ -383,14 +373,14 @@
 
     }
   function handleStartButtonHover(startBtn) {
-      if (ts.startTime) {
+      if (ts != null && ts.startTime) {
         startBtn.textContent = 'Reset Tracker';
         startBtn.style.color = 'red';
       }
   };
 
   function handleStartButtonOut(startBtn){
-      if (ts.startTime) {
+      if (ts != null && ts.startTime != null) {
         startBtn.textContent = formatStartTimeButtonText(ts.startTime);
         startBtn.style.color = '#888';
       }
@@ -454,6 +444,7 @@
     };
 
   async function resetTracker() {
+      let miceLst = document.getElementById("mh-mouse-list_v2")
       ts = {};
       localStorage.removeItem('mhMouseTrackerState_v2');
       
@@ -474,10 +465,10 @@
       `;
       let huntsCountDisplay = document.getElementById("mh-tracker-hunts-count_v2");
       huntsCountDisplay.textContent = 'Hunts: 0';
-      await fetchMouseDataAndUpdateUI();
+      // await fetchMouseDataAndUpdateUI();
     }
   function startTracker(){
-    if (ts.startTime) {
+    if (ts != null && ts.startTime) {
       if (window.confirm("Reset tracker? All data deleted.")) {
         resetTracker();
       }
@@ -578,7 +569,6 @@
         if(floatingDivState.tracked_mice.includes(currentMouseData[mouse].name)){
           if(!used_mice.includes(currentMouseData[mouse].name)){
             used_mice.push(currentMouseData[mouse].name)
-            console.log(currentMouseData[mouse]);
             localMouseSubcontainer.appendChild(createMouseRow(currentMouseData[mouse], ts.initialMouseData))
           }
         }
@@ -843,7 +833,7 @@
       
       const currentEnvId = user.environment_type;
       const groupedMouseData = groupMouseData(currentMouseData, currentEnvId);
-      const trackedHunts = calculateTotalHunts(currentMouseData) - ts.lifetimeHuntsAtStart;
+      const trackedHunts = calculateTotalHuntsSinceStart(currentMouseData);
       const huntsCountDisplay = document.getElementById("mh-tracker-hunts-count_v2")
       huntsCountDisplay.textContent = `Hunts: ${trackedHunts.toLocaleString()}`;
 
@@ -881,7 +871,6 @@
           }
         }
       }
-      console.log(getCMValueForCurrentDepth());
     };
 
     function getCMValueForCurrentDepth(){
@@ -894,7 +883,6 @@
           console.warn('No element with id "mh-location-mice-container_v2_main" found.');
           return { x: 0, y: 0 };
         }
-        console.log("in mouse level")
 
           Array.from(container.children).forEach(child => {
             const spans = child.querySelectorAll('span');
