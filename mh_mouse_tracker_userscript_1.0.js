@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MouseHunt Mouse Tracker
 // @namespace    http://tampermonkey.net/
-// @version      1.1.0
+// @version      1.1.2
 // @description  Tracks mice caught in MouseHunt
 // @author       CherryMellonTree
 // @match        https://www.mousehuntgame.com/*
@@ -380,7 +380,12 @@
           let initial = ts.initialMouseData.find(el => correctMouseName(el.name) === localName);
           let current = md.find(el => correctMouseName(el.name) === localName)
           uniqueNames[key] = true;
-          hunts += current.catches + current.misses - initial.catches - initial.misses;
+          if(current){
+            hunts += current.catches + current.misses
+          }
+          if(initial){
+            hunts = hunts - initial.catches - initial.misses;
+          }
         }
       }
     })
@@ -935,7 +940,10 @@
             const y = parseInt(match[2], 10);
             totalX += x !== 0 ? 1 : 0;
             totalY += 1;
-  
+            if (x != 0){
+              child.style.color = 'green';
+              container.appendChild(child);
+            }
           })
         //you are now on "mouse"-level
       }else{
@@ -964,8 +972,6 @@
       }
 
       layerIndicator.textContent = `${totalX}/${totalY}`
-      console.log(totalX)
-      console.log(totalY)
       return { x: totalX, y: totalY };
     }
 
@@ -1121,9 +1127,14 @@
   /*
   ** The Glue
   */
+  async function InitialiseContainersSlowly(){
+    await new Promise(r => setTimeout(r, 1000));
+    InitialiseContainers();
+  }
   async function initializeTracker() {
       InitialiseContainers();
-
+      var campPageButton = document.getElementsByClassName("mousehuntHud-menu-item root")[0]
+      campPageButton.addEventListener("click", InitialiseContainersSlowly);
   }
 
   initializeTracker();
