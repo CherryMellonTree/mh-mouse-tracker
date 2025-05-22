@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MouseHunt Mouse Tracker
 // @namespace    http://tampermonkey.net/
-// @version      1.1.2
+// @version      1.1.4
 // @description  Tracks mice caught in MouseHunt
 // @author       CherryMellonTree
 // @match        https://www.mousehuntgame.com/*
@@ -150,7 +150,7 @@
 
   }
 
-  function triggerFloatingToggle(checkbox, floatingDiv){
+  function triggerFloatingToggle(checkbox){
     const isVisible = checkbox.checked;
     let element = document.getElementById("mh-mouse-tracker-focusContainer_v2");
     element.style.display = isVisible ? "block" : "none";
@@ -159,7 +159,7 @@
 
   }
   const isNewCatch = (mouse, initialMouseData) => {
-    const initialMouse = initialMouseData && initialMouseData.find(initialMouse => initialMouse.name === mouse.name);
+    const initialMouse = initialMouseData && initialMouseData.find(initialMouse => compareMiceByName(initialMouse,mouse.name));
     return initialMouse && mouse.catches > initialMouse.catches;
   };
 
@@ -236,12 +236,24 @@
 
     return correctedGroupname
   }
+  function compareMouseToName(mouse1, name){
+    // console.log(mouse1)
+    // console.log(name);
+    return correctMouseName(mouse1.name) === name;
+  }
+  function compareMiceByName(mouse1, mouse2){
+    return compareMouseToName(mouse1, mouse2.name);
+  }
 
-  const calculateSessionCM = (mouse, initialMouseData) => {
+  const calculateSessionCMForMouse = (mouse, initialMouseData) => {
     let sessionCatches = 0;
     let sessionMisses = 0;
     if (initialMouseData) {
-      const sessionStartData = initialMouseData.find(initialMouse => initialMouse.name === mouse.name);
+      const sessionStartData = initialMouseData.find(initialMouse => compareMiceByName(initialMouse,mouse));
+      if(mouse.name.includes("read")){
+        console.log(mouse);
+        console.log(sessionStartData)
+      }
       if (sessionStartData) {
         sessionCatches = mouse.catches - sessionStartData.catches;
         sessionMisses = mouse.misses - sessionStartData.misses;
@@ -326,7 +338,7 @@
         if(loc == undefined){
           continue
         }
-        let currentMouse = allMiceStats.find(entry => correctMouseName(entry.name) == rawMouseName)
+        let currentMouse = allMiceStats.find(el => compareMouseToName(el, rawMouseName))
         if( undefined == currentMouse){
           currentMouse = {"name": rawMouseName, 'num_catches': 0, 'num_misses': 0}
         }
@@ -373,12 +385,12 @@
     const uniqueNames = {};
     var hunts = 0;
     Object.keys(mouseLocationsData).forEach(key => {
-      let localName = correctMouseName(key)
 
       if(!event_mice.includes(key)){
         if(!uniqueNames[key]){
-          let initial = ts.initialMouseData.find(el => correctMouseName(el.name) === localName);
-          let current = md.find(el => correctMouseName(el.name) === localName)
+          let initial = ts.initialMouseData.find(el => compareMouseToName(el, key))
+          let current = md.find(el => compareMouseToName(el, key))
+
           uniqueNames[key] = true;
           if(current){
             hunts += current.catches + current.misses
@@ -389,14 +401,6 @@
         }
       }
     })
-    // for (const mouse of md){
-    //   let localName = correctMouseName(mouse.name)
-    //   if(!uniqueNames[mouse.name] && !event_mice.includes(mouse.name)){
-    //     let match = ts.initialMouseData.find(el => correctMouseName(el.name) === localName);
-    //       uniqueNames[mouse.name] = true;
-    //       hunts += mouse.catches + mouse.misses - match.catches - match.misses;
-    //   }
-    // }
 
     return hunts
   }
@@ -535,7 +539,7 @@
     }
     for(let entry in current_state){
       let localMouse = JSON.parse(JSON.stringify(current_state[entry]));
-      let localStart = starting_state.find(thisone => correctMouseName(thisone.name) == correctMouseName(localMouse.name))
+      let localStart = starting_state.find(thisone => compareMiceByName(thisone, localMouse.name))
       if(localStart){
         localMouse.catches -= localStart.catches;
         localMouse.misses -= localStart.misses;
@@ -772,7 +776,7 @@
       group.locations.forEach(locationGroup => {
           locationGroup.mice.forEach(mouse => {
               uniqueMiceSet.add(mouse.name);
-              const { sessionCatches } = calculateSessionCM(mouse, ts.initialMouseData || []);
+              const { sessionCatches } = calculateSessionCMForMouse(mouse, ts.initialMouseData || []);
               if (sessionCatches > 0) {
                   nonZeroMiceSet.add(mouse.name);
               }
@@ -804,7 +808,7 @@
       const nonZeroMiceSet = new Set();
       locationGroup.mice.forEach(mouse => {
           uniqueMiceSet.add(mouse.name);
-          const { sessionCatches } = calculateSessionCM(mouse, ts.initialMouseData || []);
+          const { sessionCatches } = calculateSessionCMForMouse(mouse, ts.initialMouseData || []);
           if (sessionCatches > 0) {
               nonZeroMiceSet.add(mouse.name);
           }
@@ -840,7 +844,7 @@
     const cmCol = document.createElement('span');
     cmCol.className = 'mh-cm-col_v2';
     
-    const { sessionCatches, sessionMisses, cleared } = calculateSessionCM(mouse, initialMouseData);
+    const { sessionCatches, sessionMisses, cleared } = calculateSessionCMForMouse(mouse, initialMouseData);
     cmCol.textContent = `${sessionCatches.toLocaleString()}/${sessionMisses.toLocaleString()}`;
 
     mouseDiv.appendChild(nameCol);
@@ -1042,36 +1046,39 @@
       label.htmlFor = "floating-toggle";
       label.textContent = "Show focus";
 
+      let floatingContainer = document.getElementById("mh-mouse-tracker-focusContainer_v2");
+      if(!floatingContainer){
 
-      const floatingContainer = document.createElement("div")
-      floatingContainer.id = "mh-mouse-tracker-focusContainer_v2";
-
-      const floatingContainerHeaderRow = document.createElement("div");
-      floatingContainerHeaderRow.id = "mh-mouse-tracker-currentFocus_v2"
-
-      const floatingContainerHeader = document.createElement("div");
-      floatingContainerHeader.textContent = "No mice currently selected \n Click on mice to add them to this tab and update data";
-      floatingContainerHeader.id = "mh-mouse-tracker-currentFocusHeader_v2";
-      floatingContainerHeader.style.display = "block";
-      const fetchDataButton = createUpdateDataButton()
-
-      
+        floatingContainer = document.createElement("div")
+        floatingContainer.id = "mh-mouse-tracker-focusContainer_v2";
+  
+        const floatingContainerHeaderRow = document.createElement("div");
+        floatingContainerHeaderRow.id = "mh-mouse-tracker-currentFocus_v2"
+  
+        const floatingContainerHeader = document.createElement("div");
+        floatingContainerHeader.textContent = "No mice currently selected \n Click on mice to add them to this tab and update data";
+        floatingContainerHeader.id = "mh-mouse-tracker-currentFocusHeader_v2";
+        floatingContainerHeader.style.display = "block";
+        const fetchDataButton = createUpdateDataButton()
+  
+        floatingContainerHeaderRow.appendChild(floatingContainerHeader);
+        floatingContainerHeaderRow.appendChild(fetchDataButton);
+        floatingContainer.appendChild(floatingContainerHeaderRow)
+        document.body.appendChild(floatingContainer);
+        
+        
+      }
       if (floatingDivState && typeof floatingDivState.floatingVisible === "boolean") {
         floatingContainer.style.display = floatingDivState.floatingVisible ? "block" : "none";
         focusGroupToggle.checked = floatingDivState.floatingVisible;
       }
-
-      focusGroupToggle.addEventListener("change", ()=> triggerFloatingToggle(focusGroupToggle, floatingContainerHeader));
+      focusGroupToggle.addEventListener("change", ()=> triggerFloatingToggle(focusGroupToggle));
+      
       //add buttons
       titleElement.appendChild(exportButton)
       titleElement.appendChild(exportToFileButton)
       titleElement.appendChild(focusGroupToggle)
       titleElement.appendChild(label)
-
-      floatingContainerHeaderRow.appendChild(floatingContainerHeader);
-      floatingContainerHeaderRow.appendChild(fetchDataButton);
-      floatingContainer.appendChild(floatingContainerHeaderRow)
-      document.body.appendChild(floatingContainer);
 
       return titleElement;
   }
