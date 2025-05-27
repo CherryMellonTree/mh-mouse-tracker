@@ -554,7 +554,6 @@
   function copyMouseDataToClipboard() {
     let fullOutput = "";
     let unique_mice = getAllMiceDataSinceStart();
-    console.log(unique_mice)
     unique_mice.forEach(mouse => {
         fullOutput += createExportRow(mouse) + "\n";
     });
