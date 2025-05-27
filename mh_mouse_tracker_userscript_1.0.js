@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MouseHunt Mouse Tracker
 // @namespace    http://tampermonkey.net/
-// @version      1.1.4
+// @version      1.2.0
 // @description  Tracks mice caught in MouseHunt
 // @author       CherryMellonTree
 // @match        https://www.mousehuntgame.com/*
@@ -250,10 +250,6 @@
     let sessionMisses = 0;
     if (initialMouseData) {
       const sessionStartData = initialMouseData.find(initialMouse => compareMiceByName(initialMouse,mouse));
-      if(mouse.name.includes("read")){
-        console.log(mouse);
-        console.log(sessionStartData)
-      }
       if (sessionStartData) {
         sessionCatches = mouse.catches - sessionStartData.catches;
         sessionMisses = mouse.misses - sessionStartData.misses;
@@ -265,6 +261,32 @@
     const cleared = sessionCatches>0;
     return { sessionCatches, sessionMisses, cleared };
   };
+
+  function getAllMiceDataSinceStart(){
+    const uniqueNames = {};
+    let total = []
+    let starting_state = ts.initialMouseData;
+    let current_state = current_mouse_data;
+
+    if(current_state == undefined){
+      return []
+    }
+    Object.keys(mouseLocationsData).forEach(key => {
+      if(!event_mice.includes(key)){
+        if(!uniqueNames[key]){
+          let localStart = starting_state.find(el => compareMouseToName(el, key))
+          let localMouse = current_state.find(el => compareMouseToName(el, key))
+          if(localStart){
+            localMouse.catches -= localStart.catches;
+            localMouse.misses -= localStart.misses;
+          }
+          total.push(localMouse)
+        }
+      }
+      
+    })
+    return total
+  }
 
   const groupMouseData = (currentMouseData, currentEnvId) => {
     //TODO: currently untouched method
@@ -529,28 +551,10 @@
     return `${mouse.name}\t${mouse.catches}\t${mouse.misses}`;
   }
 
-  function getAllMiceDataSinceStart(){
-    let total = []
-    let starting_state = ts.initialMouseData
-    let current_state = current_mouse_data;
-
-    if(current_state == undefined){
-      return []
-    }
-    for(let entry in current_state){
-      let localMouse = JSON.parse(JSON.stringify(current_state[entry]));
-      let localStart = starting_state.find(thisone => compareMiceByName(thisone, localMouse.name))
-      if(localStart){
-        localMouse.catches -= localStart.catches;
-        localMouse.misses -= localStart.misses;
-      }
-      total.push(localMouse)
-    }
-    return total
-  }
   function copyMouseDataToClipboard() {
     let fullOutput = "";
     let unique_mice = getAllMiceDataSinceStart();
+    console.log(unique_mice)
     unique_mice.forEach(mouse => {
         fullOutput += createExportRow(mouse) + "\n";
     });
